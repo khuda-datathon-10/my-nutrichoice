@@ -16,16 +16,8 @@ interface NutritionData {
 const Index = () => {
   const [mealData, setMealData] = useState<NutritionData[]>([]);
   const [showSearch, setShowSearch] = useState(false);
+  const [nutrients, setNutrients] = useState<any[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
-
-  // Mock data for demonstration
-  const mockNutrients = [
-    { name: "단백질", current: 45, recommended: 60, unit: "g" },
-    { name: "비타민 A", current: 350, recommended: 700, unit: "μg" },
-    { name: "비타민 C", current: 65, recommended: 100, unit: "mg" },
-    { name: "칼슘", current: 520, recommended: 800, unit: "mg" },
-    { name: "철분", current: 8, recommended: 14, unit: "mg" },
-  ];
 
   const mockRecommendations = [
     {
@@ -52,6 +44,43 @@ const Index = () => {
     }, 100);
   };
 
+  // Parse nutrition info and calculate nutrients
+  const parseNutritionData = (nutritionInfo: string) => {
+    const items = nutritionInfo.split('<br/>').filter(item => item.trim());
+    const nutrients = [];
+
+    // Standard recommended daily values (based on Korean dietary reference intakes for adults)
+    const recommendedValues: { [key: string]: number } = {
+      '탄수화물': 324,
+      '단백질': 55,
+      '지방': 54,
+      '비타민A': 700,
+      '티아민': 1.2,
+      '리보플라빈': 1.5,
+      '비타민C': 100,
+      '칼슘': 800,
+      '철분': 12,
+    };
+
+    items.forEach(item => {
+      const match = item.match(/^(.+?)\((.+?)\)\s*:\s*(.+)$/);
+      if (match) {
+        const [, name, unit, value] = match;
+        const numValue = parseFloat(value);
+        const recommended = recommendedValues[name] || numValue * 1.5;
+
+        nutrients.push({
+          name,
+          current: numValue,
+          recommended,
+          unit,
+        });
+      }
+    });
+
+    return nutrients;
+  };
+
   const handleSearch = async (schoolCode: string, date: string) => {
     try {
       toast.info("급식 데이터 조회 중...");
@@ -68,6 +97,7 @@ const Index = () => {
       if (!data || data.length === 0) {
         toast.error("해당 날짜의 급식 정보를 찾을 수 없습니다.");
         setMealData([]);
+        setNutrients([]);
         return;
       }
 
@@ -79,11 +109,34 @@ const Index = () => {
       }));
 
       setMealData(transformedData);
+
+      // Parse nutrition info from all meals for analysis
+      const allNutrients = data
+        .filter(meal => meal.nutrition_info)
+        .flatMap(meal => parseNutritionData(meal.nutrition_info));
+
+      // Aggregate nutrients by name
+      const aggregatedNutrients = allNutrients.reduce((acc: any, nutrient: any) => {
+        if (!acc[nutrient.name]) {
+          acc[nutrient.name] = {
+            name: nutrient.name,
+            current: 0,
+            recommended: nutrient.recommended,
+            unit: nutrient.unit,
+          };
+        }
+        acc[nutrient.name].current += nutrient.current;
+        return acc;
+      }, {});
+
+      setNutrients(Object.values(aggregatedNutrients));
+
       toast.success(`${data.length}개의 급식 정보를 조회했습니다.`);
     } catch (error) {
       console.error('Error fetching meal data:', error);
       toast.error('급식 데이터 조회 중 오류가 발생했습니다.');
       setMealData([]);
+      setNutrients([]);
     }
   };
 
@@ -99,7 +152,7 @@ const Index = () => {
             {mealData.length > 0 && (
               <>
                 <NutritionDisplay data={mealData} />
-                <NutritionAnalysis nutrients={mockNutrients} />
+                <NutritionAnalysis nutrients={nutrients} />
                 <FoodRecommendations recommendations={mockRecommendations} />
               </>
             )}
