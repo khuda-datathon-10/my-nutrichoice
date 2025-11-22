@@ -31,12 +31,21 @@ const NutritionDisplay = ({ data }: NutritionDisplayProps) => {
             key={index} 
             className="rounded-lg border border-border bg-card p-4 shadow-soft transition-all hover:shadow-medium"
           >
-            <div className="mb-3 flex items-start justify-between">
-              <h3 className="text-lg font-semibold text-card-foreground">
-                {meal.dishName}
-              </h3>
+            <div className="mb-3 flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-card-foreground mb-2">
+                  {meal.dishName.split('<br/>')[0]}
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {meal.dishName
+                    .split('<br/>')
+                    .slice(1)
+                    .filter(item => item.trim())
+                    .join(', ')}
+                </p>
+              </div>
               {meal.calories && (
-                <Badge variant="secondary" className="flex items-center gap-1">
+                <Badge variant="secondary" className="flex items-center gap-1 shrink-0">
                   <Flame className="h-3 w-3" />
                   {meal.calories}
                 </Badge>
