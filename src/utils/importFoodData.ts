@@ -28,23 +28,32 @@ export const importFoodDataFromFile = async (file: File) => {
       serving_size: String(row['영양성분함량기준량'] || row['1회제공량'] || row['제공량'] || '100g')
     })).filter((item: any) => item.food_name);
 
-    // Insert in batches
-    const batchSize = 100;
+    // Insert in batches with smaller batch size for better reliability
+    const batchSize = 50;
     let successCount = 0;
     let errorCount = 0;
 
     for (let i = 0; i < foodItems.length; i += batchSize) {
       const batch = foodItems.slice(i, i + batchSize);
-      const { error } = await supabase
-        .from('food_items')
-        .upsert(batch, { onConflict: 'food_code', ignoreDuplicates: false });
       
-      if (error) {
-        console.error(`Error inserting batch ${i / batchSize + 1}:`, error);
+      try {
+        const { error } = await supabase
+          .from('food_items')
+          .upsert(batch, { 
+            onConflict: 'food_code',
+            ignoreDuplicates: false 
+          });
+        
+        if (error) {
+          console.error(`Error inserting batch ${i / batchSize + 1}:`, error);
+          errorCount += batch.length;
+        } else {
+          console.log(`Inserted batch ${i / batchSize + 1}`);
+          successCount += batch.length;
+        }
+      } catch (err) {
+        console.error(`Batch ${i / batchSize + 1} processing error:`, err);
         errorCount += batch.length;
-      } else {
-        console.log(`Inserted batch ${i / batchSize + 1}`);
-        successCount += batch.length;
       }
     }
 
