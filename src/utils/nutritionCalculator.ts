@@ -26,11 +26,11 @@ function calculateTEE(profile: UserProfile): number {
   const heightInMeters = height / 100;
 
   if (gender === 'male') {
-    // 8~19세 남성 = 88.5 - 61.9 + 연령 + 1.13 * (26.7 * 체중 + 903 * 신장(m)) + 25
-    return 88.5 - 61.9 + age + 1.13 * (26.7 * weight + 903 * heightInMeters) + 25;
+    // 8~19세 남성 = 88.5 - 61.9 * 연령 + 1.13 * (26.7 * 체중 + 903 * 신장(m)) + 25
+    return 88.5 - 61.9 * age + 1.13 * (26.7 * weight + 903 * heightInMeters) + 25;
   } else {
-    // 8~19세 여성 = 135.3 - 30.8 * 연령 + 1.13 * (10.0 * 체중 + 934 * 신장(m)) + 25
-    return 135.3 - 30.8 * age + 1.13 * (10.0 * weight + 934 * heightInMeters) + 25;
+    // 8~19세 여성 = 135.3 - 30.8 * 연령 + 1.16 * (10.0 * 체중 + 934 * 신장(m)) + 25
+    return 135.3 - 30.8 * age + 1.16 * (10.0 * weight + 934 * heightInMeters) + 25;
   }
 }
 
