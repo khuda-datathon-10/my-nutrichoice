@@ -15,17 +15,17 @@ export const importFoodDataFromFile = async (file: File) => {
     const foodItems = data.map((row: any) => ({
       food_name: row['식품명'] || row['음식명'] || '',
       food_code: row['식품코드'] || '',
-      calories: String(row['에너지(kcal)'] || row['칼로리'] || ''),
-      carbohydrate: String(row['탄수화물(g)'] || ''),
-      protein: String(row['단백질(g)'] || ''),
-      fat: String(row['지방(g)'] || ''),
-      vitamin_a: String(row['비타민A(μg RAE)'] || row['비타민A'] || ''),
-      thiamine: String(row['티아민(mg)'] || row['비타민B1'] || ''),
-      riboflavin: String(row['리보플라빈(mg)'] || row['비타민B2'] || ''),
-      vitamin_c: String(row['비타민C(mg)'] || row['비타민C'] || ''),
-      calcium: String(row['칼슘(mg)'] || ''),
-      iron: String(row['철(mg)'] || ''),
-      serving_size: String(row['1회제공량'] || row['제공량'] || '')
+      calories: String(row['에너지(kcal)'] || row['칼로리'] || 0),
+      carbohydrate: String(row['탄수화물(g)'] || 0),
+      protein: String(row['단백질(g)'] || 0),
+      fat: String(row['지방(g)'] || 0),
+      vitamin_a: String(row['비타민 A(μg RAE)'] || row['비타민A(μg RAE)'] || row['비타민A'] || 0),
+      thiamine: String(row['티아민(mg)'] || row['비타민B1'] || 0),
+      riboflavin: String(row['리보플라빈(mg)'] || row['비타민B2'] || 0),
+      vitamin_c: String(row['비타민 C(mg)'] || row['비타민C(mg)'] || row['비타민C'] || 0),
+      calcium: String(row['칼슘(mg)'] || 0),
+      iron: String(row['철(mg)'] || 0),
+      serving_size: String(row['영양성분함량기준량'] || row['1회제공량'] || row['제공량'] || '100g')
     })).filter((item: any) => item.food_name);
 
     // Insert in batches
