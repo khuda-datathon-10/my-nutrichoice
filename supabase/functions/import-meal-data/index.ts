@@ -56,18 +56,30 @@ serve(async (req) => {
     }
 
     // 급식 정보 삽입
-    const mealRecords = mealData.map(meal => ({
-      school_code: meal.school_code,
-      meal_code: meal.meal_code,
-      meal_name: meal.meal_name,
-      meal_date: meal.meal_date,
-      meal_count: meal.meal_count ? parseFloat(meal.meal_count) : null,
-      dish_names: meal.dish_names,
-      origin_info: meal.origin_info,
-      calorie_info: meal.calorie_info,
-      nutrition_info: meal.nutrition_info,
-      updated_date: meal.updated_date,
-    }));
+    const mealRecords = mealData.map(meal => {
+      // Convert date format from YYYYMMDD to YYYY-MM-DD
+      const formatDate = (dateStr: string) => {
+        if (!dateStr) return null;
+        const str = String(dateStr);
+        if (str.length === 8) {
+          return `${str.slice(0, 4)}-${str.slice(4, 6)}-${str.slice(6, 8)}`;
+        }
+        return dateStr;
+      };
+
+      return {
+        school_code: meal.school_code,
+        meal_code: meal.meal_code,
+        meal_name: meal.meal_name,
+        meal_date: formatDate(meal.meal_date),
+        meal_count: meal.meal_count ? parseFloat(meal.meal_count) : null,
+        dish_names: meal.dish_names,
+        origin_info: meal.origin_info,
+        calorie_info: meal.calorie_info,
+        nutrition_info: meal.nutrition_info,
+        updated_date: formatDate(meal.updated_date),
+      };
+    });
 
     console.log(`Inserting ${mealRecords.length} meal records`);
 

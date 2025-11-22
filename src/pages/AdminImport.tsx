@@ -1,74 +1,133 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Upload, CheckCircle, Database } from "lucide-react";
-import { toast } from "sonner";
+import { Upload, CheckCircle2, FileUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import * as XLSX from 'xlsx';
 
 const AdminImport = () => {
   const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ schoolsImported?: number } | null>(null);
+  const [isImported, setIsImported] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImport = async () => {
+  const parseXLSFile = (file: File): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result;
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          
+          // Skip header row and convert to meal data format
+          const mealData = jsonData.slice(1).map((row: any) => ({
+            office_code: row[0],
+            office_name: row[1],
+            school_code: row[2],
+            school_name: row[3],
+            meal_code: row[4],
+            meal_name: row[5],
+            meal_date: row[6],
+            meal_count: row[7],
+            dish_names: row[8],
+            origin_info: row[9],
+            calorie_info: row[10],
+            nutrition_info: row[11],
+            updated_date: row[12]
+          })).filter(item => item.school_code); // Filter out empty rows
+          
+          resolve(mealData);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      reader.onerror = reject;
+      reader.readAsBinaryString(file);
+    });
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
     setIsImporting(true);
+    
     try {
-      const { data, error } = await supabase.functions.invoke('parse-and-import');
+      toast.info('파일 파싱 중...');
+      const mealData = await parseXLSFile(file);
+      
+      toast.info(`${mealData.length}개의 급식 데이터를 업로드 중...`);
+      
+      const { data, error } = await supabase.functions.invoke('import-meal-data', {
+        body: { mealData }
+      });
 
       if (error) throw error;
 
-      toast.success(`${data.schoolsImported}개 학교 임포트 완료!`);
-      setImportResult(data);
+      toast.success(`급식 데이터 임포트 완료!\n학교: ${data.schoolsImported}개, 급식: ${data.mealsImported}개`);
+      setIsImported(true);
     } catch (error) {
       console.error('Error importing data:', error);
-      toast.error("데이터 임포트 중 오류가 발생했습니다");
+      toast.error('데이터 임포트 중 오류가 발생했습니다.');
     } finally {
       setIsImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
   return (
     <div className="min-h-screen bg-background p-8">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="text-center space-y-2">
-          <h1 className="text-4xl font-bold">데이터 관리</h1>
-          <p className="text-muted-foreground">급식 및 학교 데이터를 관리합니다</p>
-        </div>
-
-        <Card className="shadow-medium border-border/50 bg-gradient-card">
+      <div className="container mx-auto max-w-4xl">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-2xl">
-              <Database className="h-6 w-6 text-primary" />
-              학교 데이터베이스 임포트
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-6 w-6" />
+              급식 데이터 임포트
             </CardTitle>
-            <CardDescription className="text-base">
-              XLS 파일의 모든 학교 정보를 데이터베이스에 저장합니다
+            <CardDescription>
+              XLS 파일을 업로드하여 급식 데이터를 데이터베이스로 임포트합니다
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Button
-              onClick={handleImport}
-              disabled={isImporting}
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-soft transition-all hover:shadow-medium"
-              size="lg"
-            >
-              {importResult ? (
-                <>
-                  <CheckCircle className="mr-2 h-5 w-5" />
-                  임포트 완료 ({importResult.schoolsImported}개 학교)
-                </>
-              ) : (
-                <>
-                  <Upload className="mr-2 h-5 w-5" />
-                  {isImporting ? "임포트 중..." : "학교 데이터 임포트"}
-                </>
-              )}
-            </Button>
-
-            {importResult && (
-              <div className="mt-4 p-4 bg-success/10 border border-success/20 rounded-lg">
-                <p className="text-success text-sm">
-                  ✓ {importResult.schoolsImported}개의 학교 정보가 성공적으로 저장되었습니다
-                </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xls,.xlsx"
+              onChange={handleFileUpload}
+              className="hidden"
+              id="file-upload"
+            />
+            <label htmlFor="file-upload">
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isImporting}
+                className="w-full"
+                size="lg"
+                asChild
+              >
+                <span>
+                  {isImporting ? (
+                    "임포트 중..."
+                  ) : (
+                    <>
+                      <FileUp className="mr-2 h-5 w-5" />
+                      XLS 파일 선택 및 업로드
+                    </>
+                  )}
+                </span>
+              </Button>
+            </label>
+            {isImported && (
+              <div className="flex items-center justify-center text-green-600 gap-2">
+                <CheckCircle2 className="h-5 w-5" />
+                <span>임포트 완료</span>
               </div>
             )}
           </CardContent>
