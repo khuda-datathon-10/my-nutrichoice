@@ -74,7 +74,7 @@ const NutritionAnalysis = ({ nutrients }: NutritionAnalysisProps) => {
               
               <Progress 
                 value={Math.min(percentage, 100)} 
-                className="h-2"
+                className={`h-2 ${percentage > 100 ? '[&>div]:bg-destructive' : ''}`}
               />
             </div>
           );
