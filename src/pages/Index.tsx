@@ -135,7 +135,7 @@ const Index = () => {
 
       setNutrients(Object.values(aggregatedNutrients));
 
-      toast.success(`${data.length}개의 급식 정보를 조회했습니다.`);
+      toast.success(`${transformedData.length}개의 급식 정보를 조회했습니다.`);
     } catch (error) {
       console.error('Error fetching meal data:', error);
       toast.error('급식 데이터 조회 중 오류가 발생했습니다.');
