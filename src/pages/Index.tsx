@@ -22,25 +22,12 @@ const Index = () => {
   const [hasBreakfast, setHasBreakfast] = useState(false);
   const [showBreakfastAdder, setShowBreakfastAdder] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [mlRecommendations, setMlRecommendations] = useState<any[]>([]);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const mockRecommendations = [
-    {
-      nutrient: "단백질",
-      foods: ["닭가슴살", "두부", "계란", "연어", "그릭요거트"],
-      icon: "Beef"
-    },
-    {
-      nutrient: "비타민",
-      foods: ["당근", "시금치", "브로콜리", "파프리카", "토마토"],
-      icon: "Apple"
-    },
-    {
-      nutrient: "칼슘",
-      foods: ["우유", "치즈", "요거트", "뼈째먹는 생선", "아몬드"],
-      icon: "Milk"
-    }
-  ];
+  // ML API URL - 사용자가 배포한 Python ML 서비스 URL로 변경 필요
+  const ML_API_URL = import.meta.env.VITE_ML_API_URL || 'http://localhost:8000';
 
   const handleGetStarted = () => {
     setShowSearch(true);
@@ -155,6 +142,9 @@ const Index = () => {
       setNutrients(Object.values(aggregatedNutrients));
 
       toast.success(`${transformedData.length}개의 급식 정보를 조회했습니다.`);
+      
+      // Calculate deficiencies and get ML recommendations
+      await fetchMLRecommendations(Object.values(aggregatedNutrients), recommendedNutrients);
     } catch (error) {
       console.error('Error fetching meal data:', error);
       toast.error('급식 데이터 조회 중 오류가 발생했습니다.');
@@ -163,7 +153,7 @@ const Index = () => {
     }
   };
 
-  const handleAddBreakfast = (foodItems: any[]) => {
+  const handleAddBreakfast = async (foodItems: any[]) => {
     if (!userProfile) {
       toast.error("먼저 급식 정보를 조회해주세요");
       return;
@@ -234,6 +224,76 @@ const Index = () => {
 
     setNutrients(updatedNutrients);
     setShowBreakfastAdder(false);
+    
+    // Recalculate ML recommendations with breakfast
+    await fetchMLRecommendations(updatedNutrients, recommendedNutrients);
+  };
+
+  const fetchMLRecommendations = async (currentNutrients: any[], recommended: any) => {
+    try {
+      setIsLoadingRecommendations(true);
+      
+      // Calculate deficiencies (recommended - current, minimum 0)
+      const nutrientMap: Record<string, number> = {
+        '탄수화물': 0,
+        '단백질': 0,
+        '지방': 0,
+        '비타민A': 0,
+        '티아민': 0,
+        '리보플라빈': 0,
+        '비타민C': 0,
+        '칼슘': 0,
+        '철분': 0,
+      };
+
+      // Get current intake
+      currentNutrients.forEach(nutrient => {
+        if (nutrientMap.hasOwnProperty(nutrient.name)) {
+          nutrientMap[nutrient.name] = nutrient.current;
+        }
+      });
+
+      // Calculate deficiencies
+      const deficiencies = {
+        carbohydrate: Math.max(0, (recommended.carbohydrate || 0) - nutrientMap['탄수화물']),
+        protein: Math.max(0, (recommended.protein || 0) - nutrientMap['단백질']),
+        fat: Math.max(0, (recommended.fat || 0) - nutrientMap['지방']),
+        vitamin_a: Math.max(0, (recommended.vitaminA || 0) - nutrientMap['비타민A']),
+        thiamine: Math.max(0, (recommended.thiamine || 0) - nutrientMap['티아민']),
+        riboflavin: Math.max(0, (recommended.riboflavin || 0) - nutrientMap['리보플라빈']),
+        vitamin_c: Math.max(0, (recommended.vitaminC || 0) - nutrientMap['비타민C']),
+        calcium: Math.max(0, (recommended.calcium || 0) - nutrientMap['칼슘']),
+        iron: Math.max(0, (recommended.iron || 0) - nutrientMap['철분']),
+      };
+
+      console.log('Calculated deficiencies:', deficiencies);
+
+      // Call ML API
+      const response = await fetch(`${ML_API_URL}/recommend`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ deficiencies }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`ML API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setMlRecommendations(data.recommendations || []);
+      
+      if (data.recommendations && data.recommendations.length > 0) {
+        toast.success('맞춤 음식 추천을 받았습니다!');
+      }
+    } catch (error) {
+      console.error('Error fetching ML recommendations:', error);
+      toast.error('음식 추천을 가져오는 중 오류가 발생했습니다. ML API가 실행 중인지 확인해주세요.');
+      setMlRecommendations([]);
+    } finally {
+      setIsLoadingRecommendations(false);
+    }
   };
 
   return (
@@ -253,7 +313,13 @@ const Index = () => {
               <>
                 <NutritionDisplay data={mealData} />
                 <NutritionAnalysis nutrients={nutrients} />
-                <FoodRecommendations recommendations={mockRecommendations} />
+                {isLoadingRecommendations ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">맞춤 음식 추천을 생성하는 중...</p>
+                  </div>
+                ) : mlRecommendations.length > 0 ? (
+                  <FoodRecommendations recommendations={mlRecommendations} />
+                ) : null}
               </>
             )}
           </div>
