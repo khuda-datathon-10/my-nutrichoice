@@ -106,6 +106,7 @@ const Index = () => {
         toast.error("해당 날짜의 급식 정보를 찾을 수 없습니다.");
         setMealData([]);
         setNutrients([]);
+        setShowBreakfastAdder(false);
         return;
       }
 
