@@ -21,6 +21,7 @@ const NutritionAnalysis = ({ nutrients }: NutritionAnalysisProps) => {
 
   const getStatus = (current: number, recommended: number) => {
     const percentage = (current / recommended) * 100;
+    if (percentage > 100) return { status: "초과", color: "info", icon: TrendingUp };
     if (percentage >= 90) return { status: "충족", color: "success", icon: CheckCircle };
     if (percentage >= 70) return { status: "양호", color: "warning", icon: TrendingUp };
     return { status: "부족", color: "destructive", icon: AlertCircle };
@@ -39,7 +40,7 @@ const NutritionAnalysis = ({ nutrients }: NutritionAnalysisProps) => {
       </CardHeader>
       <CardContent className="space-y-6">
         {nutrients.map((nutrient, index) => {
-          const percentage = Math.min((nutrient.current / nutrient.recommended) * 100, 100);
+          const percentage = (nutrient.current / nutrient.recommended) * 100;
           const statusInfo = getStatus(nutrient.current, nutrient.recommended);
           const StatusIcon = statusInfo.icon;
 
@@ -57,6 +58,8 @@ const NutritionAnalysis = ({ nutrients }: NutritionAnalysisProps) => {
                         ? "border-success text-success" 
                         : statusInfo.color === "warning"
                         ? "border-warning text-warning"
+                        : statusInfo.color === "info"
+                        ? "border-blue-500 text-blue-500"
                         : "border-destructive text-destructive"
                     }
                   >
@@ -70,7 +73,7 @@ const NutritionAnalysis = ({ nutrients }: NutritionAnalysisProps) => {
               </div>
               
               <Progress 
-                value={percentage} 
+                value={Math.min(percentage, 100)} 
                 className="h-2"
               />
             </div>
