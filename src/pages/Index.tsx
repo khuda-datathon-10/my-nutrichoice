@@ -102,12 +102,14 @@ const Index = () => {
         return;
       }
 
-      // Transform data to match NutritionData interface
-      const transformedData: NutritionData[] = data.map(meal => ({
-        dishName: `${meal.meal_name}: ${meal.dish_names || ''}`,
-        calories: meal.calorie_info || '',
-        nutrition: meal.nutrition_info || ''
-      }));
+      // Transform data to match NutritionData interface (filter out dinner/석식)
+      const transformedData: NutritionData[] = data
+        .filter(meal => meal.meal_name !== '석식')
+        .map(meal => ({
+          dishName: `${meal.meal_name}<br/>${meal.dish_names || ''}`,
+          calories: meal.calorie_info || '',
+          nutrition: meal.nutrition_info || ''
+        }));
 
       setMealData(transformedData);
 
