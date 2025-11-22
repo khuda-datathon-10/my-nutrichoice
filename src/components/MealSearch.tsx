@@ -59,13 +59,13 @@ const formSchema = z.object({
   height: z.string().min(1, "키를 입력해주세요")
     .refine((val) => {
       const num = parseFloat(val);
-      return !isNaN(num) && num >= 100 && num <= 300;
-    }, "키는 100~300cm 사이여야 합니다"),
+      return !isNaN(num) && num >= 0 && num <= 300;
+    }, "키는 0~300cm 사이여야 합니다"),
   weight: z.string().min(1, "몸무게를 입력해주세요")
     .refine((val) => {
       const num = parseFloat(val);
-      return !isNaN(num) && num >= 10 && num <= 300;
-    }, "몸무게는 10~300kg 사이여야 합니다"),
+      return !isNaN(num) && num >= 0 && num <= 300;
+    }, "몸무게는 0~300kg 사이여야 합니다"),
   gender: z.string().min(1, "성별을 선택해주세요"),
   date: z.string().min(1, "날짜를 선택해주세요"),
 });
