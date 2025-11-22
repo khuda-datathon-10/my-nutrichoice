@@ -34,14 +34,14 @@ const NutritionDisplay = ({ data }: NutritionDisplayProps) => {
             <div className="mb-3 flex items-start justify-between gap-4">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-card-foreground mb-2">
-                  {meal.dishName.split('<br/>')[0].replace(/\(\d+\)/g, '')}
+                  {meal.dishName.split('<br/>')[0].replace(/\([^)]*\)/g, '').trim()}
                 </h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   {meal.dishName
                     .split('<br/>')
                     .slice(1)
                     .filter(item => item.trim())
-                    .map(item => item.replace(/\(\d+\)/g, ''))
+                    .map(item => item.replace(/\([^)]*\)/g, '').trim())
                     .join(', ')}
                 </p>
               </div>
