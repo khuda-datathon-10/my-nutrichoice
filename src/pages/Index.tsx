@@ -5,6 +5,7 @@ import NutritionDisplay from "@/components/NutritionDisplay";
 import NutritionAnalysis from "@/components/NutritionAnalysis";
 import FoodRecommendations from "@/components/FoodRecommendations";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NutritionData {
   dishName: string;
@@ -52,40 +53,38 @@ const Index = () => {
   };
 
   const handleSearch = async (schoolCode: string, date: string) => {
-    // In a real app, this would call the NEIS API
-    // For demonstration, using mock data
-    toast.info("실제 구현 시 NEIS API를 호출합니다");
-    
-    // Mock response
-    const mockData: NutritionData[] = [
-      {
-        dishName: "차조밥",
-        calories: "320kcal",
-        nutrition: "탄수화물 68g | 단백질 6g | 지방 1g"
-      },
-      {
-        dishName: "된장찌개",
-        calories: "85kcal",
-        nutrition: "단백질 8g | 나트륨 850mg | 지방 3g"
-      },
-      {
-        dishName: "제육볶음",
-        calories: "245kcal",
-        nutrition: "단백질 22g | 지방 12g | 탄수화물 10g"
-      },
-      {
-        dishName: "깍두기",
-        calories: "15kcal",
-        nutrition: "비타민C 12mg | 식이섬유 2g"
-      },
-      {
-        dishName: "우유",
-        calories: "130kcal",
-        nutrition: "칼슘 240mg | 단백질 8g | 지방 7g"
-      }
-    ];
+    try {
+      toast.info("급식 데이터 조회 중...");
+      
+      const { data, error } = await supabase
+        .from('meal_info')
+        .select('*')
+        .eq('school_code', schoolCode)
+        .eq('meal_date', date)
+        .order('meal_code', { ascending: true });
 
-    setMealData(mockData);
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        toast.error("해당 날짜의 급식 정보를 찾을 수 없습니다.");
+        setMealData([]);
+        return;
+      }
+
+      // Transform data to match NutritionData interface
+      const transformedData: NutritionData[] = data.map(meal => ({
+        dishName: `${meal.meal_name}: ${meal.dish_names || ''}`,
+        calories: meal.calorie_info || '',
+        nutrition: meal.nutrition_info || ''
+      }));
+
+      setMealData(transformedData);
+      toast.success(`${data.length}개의 급식 정보를 조회했습니다.`);
+    } catch (error) {
+      console.error('Error fetching meal data:', error);
+      toast.error('급식 데이터 조회 중 오류가 발생했습니다.');
+      setMealData([]);
+    }
   };
 
   return (
