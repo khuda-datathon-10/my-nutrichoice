@@ -19,6 +19,7 @@ export type Database = {
           calcium: string | null
           calories: string | null
           carbohydrate: string | null
+          cluster_id: number | null
           created_at: string | null
           fat: string | null
           food_code: string | null
@@ -36,6 +37,7 @@ export type Database = {
           calcium?: string | null
           calories?: string | null
           carbohydrate?: string | null
+          cluster_id?: number | null
           created_at?: string | null
           fat?: string | null
           food_code?: string | null
@@ -53,6 +55,7 @@ export type Database = {
           calcium?: string | null
           calories?: string | null
           carbohydrate?: string | null
+          cluster_id?: number | null
           created_at?: string | null
           fat?: string | null
           food_code?: string | null
