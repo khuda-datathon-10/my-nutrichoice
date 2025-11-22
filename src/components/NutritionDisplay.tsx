@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Utensils, Flame, TrendingDown } from "lucide-react";
+import { Utensils, Flame } from "lucide-react";
 
 interface NutritionData {
   dishName: string;
@@ -51,26 +51,6 @@ const NutritionDisplay = ({ data }: NutritionDisplayProps) => {
                 </Badge>
               )}
             </div>
-            
-            {meal.nutrition && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <TrendingDown className="h-4 w-4" />
-                  영양 정보
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {meal.nutrition.split('|').map((nutrient, idx) => (
-                    <Badge 
-                      key={idx} 
-                      variant="outline"
-                      className="text-xs"
-                    >
-                      {nutrient.trim()}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         ))}
       </CardContent>
