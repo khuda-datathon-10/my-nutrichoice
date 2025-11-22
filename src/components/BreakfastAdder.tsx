@@ -81,7 +81,6 @@ const BreakfastAdder = ({ onAddBreakfast }: BreakfastAdderProps) => {
       setSelectedFoods([...selectedFoods, food]);
       toast.success(`${food.food_name} 추가됨`);
     }
-    setOpen(false);
   };
 
   const handleRemoveFood = (foodId: string) => {

@@ -68,7 +68,7 @@ const NutritionAnalysis = ({ nutrients }: NutritionAnalysisProps) => {
                   </Badge>
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {nutrient.current}{nutrient.unit} / {nutrient.recommended}{nutrient.unit}
+                  {nutrient.current.toFixed(3)}{nutrient.unit} / {nutrient.recommended.toFixed(3)}{nutrient.unit}
                 </span>
               </div>
               
