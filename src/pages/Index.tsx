@@ -113,9 +113,9 @@ const Index = () => {
 
       setMealData(transformedData);
 
-      // Parse nutrition info from all meals for analysis
+      // Parse nutrition info from all meals for analysis (excluding dinner/석식)
       const allNutrients = data
-        .filter(meal => meal.nutrition_info)
+        .filter(meal => meal.nutrition_info && meal.meal_name !== '석식')
         .flatMap(meal => parseNutritionData(meal.nutrition_info));
 
       // Aggregate nutrients by name
