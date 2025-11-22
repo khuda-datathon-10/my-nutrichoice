@@ -22,25 +22,8 @@ const Index = () => {
   const [hasBreakfast, setHasBreakfast] = useState(false);
   const [showBreakfastAdder, setShowBreakfastAdder] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [mlRecommendations, setMlRecommendations] = useState<any[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
-
-  const mockRecommendations = [
-    {
-      nutrient: "단백질",
-      foods: ["닭가슴살", "두부", "계란", "연어", "그릭요거트"],
-      icon: "Beef"
-    },
-    {
-      nutrient: "비타민",
-      foods: ["당근", "시금치", "브로콜리", "파프리카", "토마토"],
-      icon: "Apple"
-    },
-    {
-      nutrient: "칼슘",
-      foods: ["우유", "치즈", "요거트", "뼈째먹는 생선", "아몬드"],
-      icon: "Milk"
-    }
-  ];
 
   const handleGetStarted = () => {
     setShowSearch(true);
@@ -152,9 +135,13 @@ const Index = () => {
         return acc;
       }, {});
 
-      setNutrients(Object.values(aggregatedNutrients));
+    const nutrientsArray = Object.values(aggregatedNutrients);
+    setNutrients(nutrientsArray);
 
-      toast.success(`${transformedData.length}개의 급식 정보를 조회했습니다.`);
+    // Calculate deficiencies and get ML recommendations
+    await getMLRecommendations(nutrientsArray);
+
+    toast.success(`${transformedData.length}개의 급식 정보를 조회했습니다.`);
     } catch (error) {
       console.error('Error fetching meal data:', error);
       toast.error('급식 데이터 조회 중 오류가 발생했습니다.');
@@ -163,7 +150,7 @@ const Index = () => {
     }
   };
 
-  const handleAddBreakfast = (foodItems: any[]) => {
+  const handleAddBreakfast = async (foodItems: any[]) => {
     if (!userProfile) {
       toast.error("먼저 급식 정보를 조회해주세요");
       return;
@@ -234,6 +221,40 @@ const Index = () => {
 
     setNutrients(updatedNutrients);
     setShowBreakfastAdder(false);
+
+    // Recalculate ML recommendations with breakfast included
+    await getMLRecommendations(updatedNutrients);
+  };
+
+  const getMLRecommendations = async (nutrientsData: any[]) => {
+    try {
+      // Calculate deficiencies (권장 섭취량 - 현재 섭취량)
+      const deficiencies: Record<string, number> = {};
+      
+      nutrientsData.forEach((nutrient: any) => {
+        const deficit = Math.max(0, nutrient.recommended - nutrient.current);
+        deficiencies[nutrient.name] = deficit;
+      });
+
+      console.log('Calculated deficiencies:', deficiencies);
+
+      // Call edge function to get ML-based recommendations
+      const { data, error } = await supabase.functions.invoke('predict-cluster', {
+        body: { deficiencies }
+      });
+
+      if (error) {
+        console.error('ML recommendation error:', error);
+        toast.error('ML 기반 추천을 가져오는 중 오류가 발생했습니다.');
+        return;
+      }
+
+      if (data && data.recommendations) {
+        setMlRecommendations(data.recommendations);
+      }
+    } catch (error) {
+      console.error('Error getting ML recommendations:', error);
+    }
   };
 
   return (
@@ -253,7 +274,9 @@ const Index = () => {
               <>
                 <NutritionDisplay data={mealData} />
                 <NutritionAnalysis nutrients={nutrients} />
-                <FoodRecommendations recommendations={mockRecommendations} />
+                {mlRecommendations.length > 0 && (
+                  <FoodRecommendations recommendations={mlRecommendations} />
+                )}
               </>
             )}
           </div>
