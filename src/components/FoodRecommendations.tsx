@@ -3,9 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import { Apple, Beef, Fish, Milk, Carrot } from "lucide-react";
 
 interface Recommendation {
-  nutrient: string;
-  foods: string[];
-  icon: any;
+  food_name: string;
+  serving_size?: string;
+  calories?: string;
+  protein?: string;
+  carbohydrate?: string;
+  fat?: string;
 }
 
 interface FoodRecommendationsProps {
@@ -30,44 +33,50 @@ const FoodRecommendations = ({ recommendations }: FoodRecommendationsProps) => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-2xl">
           <Apple className="h-6 w-6 text-secondary" />
-          부족한 영양소 보충 추천
+          AI 기반 음식 추천
         </CardTitle>
         <CardDescription className="text-base">
-          오늘 부족한 영양소를 채울 수 있는 음식들을 추천해드립니다
+          영양소 부족량을 분석하여 머신러닝 모델이 추천한 음식입니다
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {recommendations.map((rec, index) => {
-          const Icon = iconMap[rec.nutrient] || Apple;
-          
-          return (
-            <div 
-              key={index}
-              className="rounded-lg border border-border bg-card p-5 shadow-soft transition-all hover:shadow-medium hover:scale-[1.02]"
-            >
-              <div className="mb-3 flex items-center gap-2">
-                <div className="rounded-full bg-accent p-2">
-                  <Icon className="h-5 w-5 text-accent-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold text-card-foreground">
-                  {rec.nutrient} 보충
-                </h3>
+      <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {recommendations.map((rec, index) => (
+          <div 
+            key={index}
+            className="rounded-lg border border-border bg-card p-4 shadow-soft transition-all hover:shadow-medium hover:scale-[1.02]"
+          >
+            <div className="flex items-start gap-3">
+              <div className="rounded-full bg-accent p-2 shrink-0">
+                <Apple className="h-4 w-4 text-accent-foreground" />
               </div>
-              
-              <div className="flex flex-wrap gap-2">
-                {rec.foods.map((food, idx) => (
-                  <Badge 
-                    key={idx}
-                    variant="secondary"
-                    className="px-3 py-1 text-sm font-medium transition-all hover:scale-105"
-                  >
-                    {food}
-                  </Badge>
-                ))}
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-card-foreground mb-1 truncate">
+                  {rec.food_name}
+                </h3>
+                <div className="space-y-0.5 text-xs text-muted-foreground">
+                  {rec.serving_size && (
+                    <p>1회 제공량: {rec.serving_size}</p>
+                  )}
+                  {rec.calories && (
+                    <p>칼로리: {parseFloat(rec.calories).toFixed(1)} kcal</p>
+                  )}
+                  <div className="flex gap-2 flex-wrap mt-1">
+                    {rec.protein && (
+                      <Badge variant="outline" className="text-xs">
+                        단백질 {parseFloat(rec.protein).toFixed(1)}g
+                      </Badge>
+                    )}
+                    {rec.carbohydrate && (
+                      <Badge variant="outline" className="text-xs">
+                        탄수화물 {parseFloat(rec.carbohydrate).toFixed(1)}g
+                      </Badge>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </CardContent>
     </Card>
   );
