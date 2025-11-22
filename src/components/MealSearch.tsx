@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Calendar, MapPin, User, Ruler, Weight } from "lucide-react";
+import { Search, Calendar, MapPin, User, Ruler, Weight, Cake } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -36,7 +36,7 @@ interface School {
 }
 
 interface MealSearchProps {
-  onSearch: (schoolCode: string, date: string, height: string, weight: string, gender: string) => void;
+  onSearch: (schoolCode: string, date: string, height: string, weight: string, gender: string, age: string) => void;
 }
 
 const MealSearch = ({ onSearch }: MealSearchProps) => {
@@ -47,6 +47,7 @@ const MealSearch = ({ onSearch }: MealSearchProps) => {
   const [height, setHeight] = useState("");
   const [weight, setWeight] = useState("");
   const [gender, setGender] = useState("");
+  const [age, setAge] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -83,11 +84,11 @@ const MealSearch = ({ onSearch }: MealSearchProps) => {
       toast.error("학교를 선택해주세요");
       return;
     }
-    if (!height || !weight || !gender) {
-      toast.error("키, 몸무게, 성별을 모두 입력해주세요");
+    if (!height || !weight || !gender || !age) {
+      toast.error("키, 몸무게, 성별, 나이를 모두 입력해주세요");
       return;
     }
-    onSearch(selectedSchool.schoolCode, date, height, weight, gender);
+    onSearch(selectedSchool.schoolCode, date, height, weight, gender, age);
     toast.success("급식 정보를 조회합니다");
   };
 
@@ -187,7 +188,22 @@ const MealSearch = ({ onSearch }: MealSearchProps) => {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="age" className="text-sm font-medium flex items-center gap-2">
+              <Cake className="h-4 w-4" />
+              나이
+            </Label>
+            <Input
+              id="age"
+              type="number"
+              placeholder="예: 15"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              className="border-input"
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="height" className="text-sm font-medium flex items-center gap-2">
               <Ruler className="h-4 w-4" />

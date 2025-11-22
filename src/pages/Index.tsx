@@ -81,8 +81,8 @@ const Index = () => {
     return nutrients;
   };
 
-  const handleSearch = async (schoolCode: string, date: string, height: string, weight: string, gender: string) => {
-    console.log('User info:', { height, weight, gender });
+  const handleSearch = async (schoolCode: string, date: string, height: string, weight: string, gender: string, age: string) => {
+    console.log('User info:', { age, height, weight, gender });
     try {
       toast.info("급식 데이터 조회 중...");
       
