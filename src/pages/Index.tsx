@@ -6,6 +6,7 @@ import NutritionAnalysis from "@/components/NutritionAnalysis";
 import FoodRecommendations from "@/components/FoodRecommendations";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { calculateRecommendedNutrients } from "@/utils/nutritionCalculator";
 
 interface NutritionData {
   dishName: string;
@@ -45,22 +46,9 @@ const Index = () => {
   };
 
   // Parse nutrition info and calculate nutrients
-  const parseNutritionData = (nutritionInfo: string) => {
+  const parseNutritionData = (nutritionInfo: string, recommendedValues: Record<string, number>) => {
     const items = nutritionInfo.split('<br/>').filter(item => item.trim());
     const nutrients = [];
-
-    // Standard recommended daily values (based on Korean dietary reference intakes for adults)
-    const recommendedValues: { [key: string]: number } = {
-      '탄수화물': 324,
-      '단백질': 55,
-      '지방': 54,
-      '비타민A': 700,
-      '티아민': 1.2,
-      '리보플라빈': 1.5,
-      '비타민C': 100,
-      '칼슘': 800,
-      '철분': 12,
-    };
 
     items.forEach(item => {
       const match = item.match(/^(.+?)\((.+?)\)\s*:\s*(.+)$/);
@@ -82,9 +70,22 @@ const Index = () => {
   };
 
   const handleSearch = async (schoolCode: string, date: string, height: string, weight: string, gender: string, age: string) => {
-    console.log('User info:', { age, height, weight, gender });
     try {
       toast.info("급식 데이터 조회 중...");
+      
+      // Calculate recommended nutrients based on user profile
+      const userProfile = {
+        age: parseInt(age),
+        height: parseFloat(height),
+        weight: parseFloat(weight),
+        gender: gender as 'male' | 'female'
+      };
+      
+      const recommendedNutrients = calculateRecommendedNutrients(userProfile);
+      console.log('Calculated recommended nutrients:', recommendedNutrients);
+      
+      // Convert to Record<string, number> for easy lookup
+      const recommendedValues: Record<string, number> = { ...recommendedNutrients };
       
       const { data, error } = await supabase
         .from('meal_info')
@@ -116,7 +117,7 @@ const Index = () => {
       // Parse nutrition info from all meals for analysis (excluding dinner/석식)
       const allNutrients = data
         .filter(meal => meal.nutrition_info && meal.meal_name !== '석식')
-        .flatMap(meal => parseNutritionData(meal.nutrition_info));
+        .flatMap(meal => parseNutritionData(meal.nutrition_info, recommendedValues));
 
       // Aggregate nutrients by name
       const aggregatedNutrients = allNutrients.reduce((acc: any, nutrient: any) => {
