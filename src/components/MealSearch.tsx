@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Calendar, MapPin } from "lucide-react";
+import { Search, Calendar, MapPin, User, Ruler, Weight } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -19,6 +19,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface School {
   schoolName: string;
@@ -29,7 +36,7 @@ interface School {
 }
 
 interface MealSearchProps {
-  onSearch: (schoolCode: string, date: string) => void;
+  onSearch: (schoolCode: string, date: string, height: string, weight: string, gender: string) => void;
 }
 
 const MealSearch = ({ onSearch }: MealSearchProps) => {
@@ -37,6 +44,9 @@ const MealSearch = ({ onSearch }: MealSearchProps) => {
   const [schools, setSchools] = useState<School[]>([]);
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [height, setHeight] = useState("");
+  const [weight, setWeight] = useState("");
+  const [gender, setGender] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -73,7 +83,11 @@ const MealSearch = ({ onSearch }: MealSearchProps) => {
       toast.error("학교를 선택해주세요");
       return;
     }
-    onSearch(selectedSchool.schoolCode, date);
+    if (!height || !weight || !gender) {
+      toast.error("키, 몸무게, 성별을 모두 입력해주세요");
+      return;
+    }
+    onSearch(selectedSchool.schoolCode, date, height, weight, gender);
     toast.success("급식 정보를 조회합니다");
   };
 
@@ -171,6 +185,54 @@ const MealSearch = ({ onSearch }: MealSearchProps) => {
             onChange={(e) => setDate(e.target.value)}
             className="border-input"
           />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="height" className="text-sm font-medium flex items-center gap-2">
+              <Ruler className="h-4 w-4" />
+              키 (cm)
+            </Label>
+            <Input
+              id="height"
+              type="number"
+              placeholder="예: 170"
+              value={height}
+              onChange={(e) => setHeight(e.target.value)}
+              className="border-input"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="weight" className="text-sm font-medium flex items-center gap-2">
+              <Weight className="h-4 w-4" />
+              몸무게 (kg)
+            </Label>
+            <Input
+              id="weight"
+              type="number"
+              placeholder="예: 65"
+              value={weight}
+              onChange={(e) => setWeight(e.target.value)}
+              className="border-input"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="gender" className="text-sm font-medium flex items-center gap-2">
+              <User className="h-4 w-4" />
+              성별
+            </Label>
+            <Select value={gender} onValueChange={setGender}>
+              <SelectTrigger id="gender" className="border-input">
+                <SelectValue placeholder="성별 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">남성</SelectItem>
+                <SelectItem value="female">여성</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <Button 
