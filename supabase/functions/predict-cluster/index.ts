@@ -6,6 +6,63 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Mapping between Korean nutrient names and database columns
+const nutrientMapping: Record<string, string> = {
+  '에너지': 'calories',
+  '탄수화물': 'carbohydrate',
+  '단백질': 'protein',
+  '지방': 'fat',
+  '비타민A': 'vitamin_a',
+  '티아민': 'thiamine',
+  '리보플라빈': 'riboflavin',
+  '비타민C': 'vitamin_c',
+  '칼슘': 'calcium',
+  '철분': 'iron',
+};
+
+interface FoodItem {
+  id: string;
+  food_name: string;
+  serving_size?: string;
+  calories?: string;
+  carbohydrate?: string;
+  protein?: string;
+  fat?: string;
+  vitamin_a?: string;
+  thiamine?: string;
+  riboflavin?: string;
+  vitamin_c?: string;
+  calcium?: string;
+  iron?: string;
+}
+
+// Calculate similarity score between deficiencies and food nutritional profile
+function calculateSimilarityScore(deficiencies: Record<string, number>, food: FoodItem): number {
+  let score = 0;
+  let totalDeficiency = 0;
+
+  // For each deficiency, check how much the food can help
+  for (const [nutrientKorean, deficiency] of Object.entries(deficiencies)) {
+    if (deficiency <= 0) continue; // Skip if not deficient
+    
+    const dbColumn = nutrientMapping[nutrientKorean];
+    if (!dbColumn) continue;
+
+    const foodValue = parseFloat(food[dbColumn as keyof FoodItem] as string || '0');
+    
+    // Weight the contribution by how deficient we are
+    // Higher deficiency = more weight for foods that provide this nutrient
+    if (foodValue > 0) {
+      score += (foodValue / Math.max(deficiency, 1)) * deficiency;
+    }
+    
+    totalDeficiency += deficiency;
+  }
+
+  // Normalize by total deficiency to get a comparable score
+  return totalDeficiency > 0 ? score / totalDeficiency : 0;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -20,25 +77,6 @@ serve(async (req) => {
     
     console.log('Received deficiencies:', deficiencies);
 
-    // Download model and scaler from storage
-    const { data: modelData, error: modelError } = await supabase.storage
-      .from('ml-models')
-      .download('model/kmeans_model.pkl');
-    
-    if (modelError) {
-      console.error('Model download error:', modelError);
-      throw new Error('Failed to load model');
-    }
-
-    const { data: scalerData, error: scalerError } = await supabase.storage
-      .from('ml-models')
-      .download('scaler/scaler.pkl');
-    
-    if (scalerError) {
-      console.error('Scaler download error:', scalerError);
-      throw new Error('Failed to load scaler');
-    }
-
     // Get all food items
     const { data: foodItems, error: foodError } = await supabase
       .from('food_items')
@@ -49,36 +87,35 @@ serve(async (req) => {
       throw new Error('Failed to load food items');
     }
 
-    console.log('Loaded food items:', foodItems?.length);
-
-    // Convert blob to ArrayBuffer
-    const modelBuffer = await modelData.arrayBuffer();
-    const scalerBuffer = await scalerData.arrayBuffer();
-
-    // Call Python service (you'll need to set up a separate Python service)
-    // For now, return a placeholder response
-    const pythonServiceUrl = Deno.env.get('PYTHON_ML_SERVICE_URL') || 'http://localhost:8000/predict';
-    
-    const mlResponse = await fetch(pythonServiceUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        deficiencies,
-        foodItems,
-        modelBuffer: Array.from(new Uint8Array(modelBuffer)),
-        scalerBuffer: Array.from(new Uint8Array(scalerBuffer)),
-      }),
-    });
-
-    if (!mlResponse.ok) {
-      throw new Error('ML service error');
+    if (!foodItems || foodItems.length === 0) {
+      console.error('No food items found');
+      return new Response(
+        JSON.stringify({ recommendations: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    const result = await mlResponse.json();
+    console.log('Loaded food items:', foodItems.length);
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    // Calculate similarity score for each food item
+    const scoredFoods = foodItems.map((food: FoodItem) => ({
+      food,
+      score: calculateSimilarityScore(deficiencies, food),
+    }));
+
+    // Sort by score (highest first) and take top 5
+    const topFoods = scoredFoods
+      .filter(item => item.score > 0) // Only include foods that help with deficiencies
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map(item => item.food);
+
+    console.log('Top 5 recommended foods:', topFoods.map(f => ({ name: f.food_name, score: calculateSimilarityScore(deficiencies, f) })));
+
+    return new Response(
+      JSON.stringify({ recommendations: topFoods }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
 
   } catch (error) {
     console.error('Error in predict-cluster:', error);
