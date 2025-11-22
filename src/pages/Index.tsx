@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import Hero from "@/components/Hero";
 import MealSearch from "@/components/MealSearch";
+import BreakfastAdder from "@/components/BreakfastAdder";
 import NutritionDisplay from "@/components/NutritionDisplay";
 import NutritionAnalysis from "@/components/NutritionAnalysis";
 import FoodRecommendations from "@/components/FoodRecommendations";
@@ -18,6 +19,9 @@ const Index = () => {
   const [mealData, setMealData] = useState<NutritionData[]>([]);
   const [showSearch, setShowSearch] = useState(false);
   const [nutrients, setNutrients] = useState<any[]>([]);
+  const [hasBreakfast, setHasBreakfast] = useState(false);
+  const [showBreakfastAdder, setShowBreakfastAdder] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
   const mockRecommendations = [
@@ -74,14 +78,16 @@ const Index = () => {
       toast.info("급식 데이터 조회 중...");
       
       // Calculate recommended nutrients based on user profile
-      const userProfile = {
+      const profile = {
         age: parseInt(age),
         height: parseFloat(height),
         weight: parseFloat(weight),
         gender: gender as 'male' | 'female'
       };
       
-      const recommendedNutrients = calculateRecommendedNutrients(userProfile);
+      setUserProfile(profile);
+      
+      const recommendedNutrients = calculateRecommendedNutrients(profile);
       console.log('Calculated recommended nutrients:', recommendedNutrients);
       
       // Convert to Record<string, number> for easy lookup
@@ -101,6 +107,14 @@ const Index = () => {
         setMealData([]);
         setNutrients([]);
         return;
+      }
+
+      // Check if breakfast exists
+      const breakfastExists = data.some(meal => meal.meal_name === '조식');
+      setHasBreakfast(breakfastExists);
+      
+      if (!breakfastExists) {
+        setShowBreakfastAdder(true);
       }
 
       // Transform data to match NutritionData interface (filter out dinner/석식)
@@ -144,6 +158,79 @@ const Index = () => {
     }
   };
 
+  const handleAddBreakfast = (foodItems: any[]) => {
+    if (!userProfile) {
+      toast.error("먼저 급식 정보를 조회해주세요");
+      return;
+    }
+
+    // Create breakfast meal data from food items
+    const breakfastDishes = foodItems.map(food => food.food_name).join(', ');
+    const totalCalories = foodItems.reduce((sum, food) => {
+      const cal = parseFloat(food.calories) || 0;
+      return sum + cal;
+    }, 0);
+
+    // Build nutrition info string
+    const nutritionParts: string[] = [];
+    
+    const totalCarbs = foodItems.reduce((sum, food) => sum + (parseFloat(food.carbohydrate) || 0), 0);
+    if (totalCarbs > 0) nutritionParts.push(`탄수화물(g) : ${totalCarbs.toFixed(1)}`);
+    
+    const totalProtein = foodItems.reduce((sum, food) => sum + (parseFloat(food.protein) || 0), 0);
+    if (totalProtein > 0) nutritionParts.push(`단백질(g) : ${totalProtein.toFixed(1)}`);
+    
+    const totalFat = foodItems.reduce((sum, food) => sum + (parseFloat(food.fat) || 0), 0);
+    if (totalFat > 0) nutritionParts.push(`지방(g) : ${totalFat.toFixed(1)}`);
+    
+    const totalVitaminA = foodItems.reduce((sum, food) => sum + (parseFloat(food.vitamin_a) || 0), 0);
+    if (totalVitaminA > 0) nutritionParts.push(`비타민A(R.E) : ${totalVitaminA.toFixed(1)}`);
+    
+    const totalThiamine = foodItems.reduce((sum, food) => sum + (parseFloat(food.thiamine) || 0), 0);
+    if (totalThiamine > 0) nutritionParts.push(`티아민(mg) : ${totalThiamine.toFixed(2)}`);
+    
+    const totalRiboflavin = foodItems.reduce((sum, food) => sum + (parseFloat(food.riboflavin) || 0), 0);
+    if (totalRiboflavin > 0) nutritionParts.push(`리보플라빈(mg) : ${totalRiboflavin.toFixed(2)}`);
+    
+    const totalVitaminC = foodItems.reduce((sum, food) => sum + (parseFloat(food.vitamin_c) || 0), 0);
+    if (totalVitaminC > 0) nutritionParts.push(`비타민C(mg) : ${totalVitaminC.toFixed(1)}`);
+    
+    const totalCalcium = foodItems.reduce((sum, food) => sum + (parseFloat(food.calcium) || 0), 0);
+    if (totalCalcium > 0) nutritionParts.push(`칼슘(mg) : ${totalCalcium.toFixed(1)}`);
+    
+    const totalIron = foodItems.reduce((sum, food) => sum + (parseFloat(food.iron) || 0), 0);
+    if (totalIron > 0) nutritionParts.push(`철분(mg) : ${totalIron.toFixed(1)}`);
+
+    const breakfastData: NutritionData = {
+      dishName: `조식<br/>${breakfastDishes}`,
+      calories: `${totalCalories.toFixed(1)} Kcal`,
+      nutrition: nutritionParts.join('<br/>')
+    };
+
+    // Add breakfast to meal data
+    const updatedMealData = [breakfastData, ...mealData];
+    setMealData(updatedMealData);
+
+    // Recalculate nutrients with breakfast
+    const recommendedNutrients = calculateRecommendedNutrients(userProfile);
+    const recommendedValues: Record<string, number> = { ...recommendedNutrients };
+    
+    const breakfastNutrients = parseNutritionData(breakfastData.nutrition, recommendedValues);
+    
+    const updatedNutrients = [...nutrients];
+    breakfastNutrients.forEach(nutrient => {
+      const existing = updatedNutrients.find(n => n.name === nutrient.name);
+      if (existing) {
+        existing.current += nutrient.current;
+      } else {
+        updatedNutrients.push(nutrient);
+      }
+    });
+
+    setNutrients(updatedNutrients);
+    setShowBreakfastAdder(false);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Hero onGetStarted={handleGetStarted} />
@@ -152,6 +239,10 @@ const Index = () => {
         <section ref={searchRef} className="py-16 px-6">
           <div className="container mx-auto max-w-6xl space-y-8">
             <MealSearch onSearch={handleSearch} />
+            
+            {showBreakfastAdder && !hasBreakfast && (
+              <BreakfastAdder onAddBreakfast={handleAddBreakfast} />
+            )}
             
             {mealData.length > 0 && (
               <>

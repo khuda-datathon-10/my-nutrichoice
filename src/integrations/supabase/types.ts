@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      food_items: {
+        Row: {
+          calcium: string | null
+          calories: string | null
+          carbohydrate: string | null
+          created_at: string | null
+          fat: string | null
+          food_code: string | null
+          food_name: string
+          id: string
+          iron: string | null
+          protein: string | null
+          riboflavin: string | null
+          serving_size: string | null
+          thiamine: string | null
+          vitamin_a: string | null
+          vitamin_c: string | null
+        }
+        Insert: {
+          calcium?: string | null
+          calories?: string | null
+          carbohydrate?: string | null
+          created_at?: string | null
+          fat?: string | null
+          food_code?: string | null
+          food_name: string
+          id?: string
+          iron?: string | null
+          protein?: string | null
+          riboflavin?: string | null
+          serving_size?: string | null
+          thiamine?: string | null
+          vitamin_a?: string | null
+          vitamin_c?: string | null
+        }
+        Update: {
+          calcium?: string | null
+          calories?: string | null
+          carbohydrate?: string | null
+          created_at?: string | null
+          fat?: string | null
+          food_code?: string | null
+          food_name?: string
+          id?: string
+          iron?: string | null
+          protein?: string | null
+          riboflavin?: string | null
+          serving_size?: string | null
+          thiamine?: string | null
+          vitamin_a?: string | null
+          vitamin_c?: string | null
+        }
+        Relationships: []
+      }
       meal_info: {
         Row: {
           calorie_info: string | null
