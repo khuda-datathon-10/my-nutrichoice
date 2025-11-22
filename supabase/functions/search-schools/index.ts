@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,41 +23,41 @@ serve(async (req) => {
 
     console.log('Searching schools with name:', schoolName);
 
-    // NEIS 학교정보 조회 API 호출
-    const apiUrl = `https://open.neis.go.kr/hub/schoolInfo`;
-    const params = new URLSearchParams({
-      KEY: '7a46c2f976404aba855e7d46a0c2c4d0',
-      Type: 'json',
-      pIndex: '1',
-      pSize: '100',
-      SCHUL_NM: schoolName,
-    });
+    // Supabase 클라이언트 생성
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    );
 
-    const response = await fetch(`${apiUrl}?${params.toString()}`);
-    const data = await response.json();
+    // 데이터베이스에서 학교 검색 (ILIKE를 사용한 부분 매칭)
+    const { data: schools, error } = await supabaseClient
+      .from('schools')
+      .select('*')
+      .ilike('school_name', `%${schoolName}%`)
+      .limit(100);
 
-    console.log('NEIS API response:', JSON.stringify(data));
-
-    // API 응답 파싱
-    if (data.schoolInfo && data.schoolInfo[1] && data.schoolInfo[1].row) {
-      const schools = data.schoolInfo[1].row.map((school: any) => ({
-        schoolName: school.SCHUL_NM,
-        schoolCode: school.SD_SCHUL_CODE,
-        officeCode: school.ATPT_OFCDC_SC_CODE,
-        address: school.ORG_RDNMA,
-        schoolType: school.SCHUL_KND_SC_NM,
-      }));
-
-      return new Response(
-        JSON.stringify({ schools }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    } else {
-      return new Response(
-        JSON.stringify({ schools: [] }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (error) {
+      console.error('Database error:', error);
+      throw error;
     }
+
+    console.log(`Found ${schools?.length || 0} schools`);
+
+    // 응답 형식 변환
+    const formattedSchools = (schools || []).map(school => ({
+      schoolName: school.school_name,
+      schoolCode: school.school_code,
+      officeCode: school.office_code,
+      address: school.office_name,
+      schoolType: school.office_name.includes('초') ? '초등학교' : 
+                  school.office_name.includes('중') ? '중학교' : 
+                  school.office_name.includes('고') ? '고등학교' : '학교',
+    }));
+
+    return new Response(
+      JSON.stringify({ schools: formattedSchools }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   } catch (error) {
     console.error('Error searching schools:', error);
     return new Response(

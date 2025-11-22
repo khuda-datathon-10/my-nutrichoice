@@ -14,13 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      meal_info: {
+        Row: {
+          calorie_info: string | null
+          created_at: string | null
+          dish_names: string | null
+          id: string
+          meal_code: string
+          meal_count: number | null
+          meal_date: string
+          meal_name: string
+          nutrition_info: string | null
+          origin_info: string | null
+          school_code: string
+          updated_date: string | null
+        }
+        Insert: {
+          calorie_info?: string | null
+          created_at?: string | null
+          dish_names?: string | null
+          id?: string
+          meal_code: string
+          meal_count?: number | null
+          meal_date: string
+          meal_name: string
+          nutrition_info?: string | null
+          origin_info?: string | null
+          school_code: string
+          updated_date?: string | null
+        }
+        Update: {
+          calorie_info?: string | null
+          created_at?: string | null
+          dish_names?: string | null
+          id?: string
+          meal_code?: string
+          meal_count?: number | null
+          meal_date?: string
+          meal_name?: string
+          nutrition_info?: string | null
+          origin_info?: string | null
+          school_code?: string
+          updated_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_info_school_code_fkey"
+            columns: ["school_code"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["school_code"]
+          },
+        ]
+      }
+      schools: {
+        Row: {
+          created_at: string | null
+          id: string
+          office_code: string
+          office_name: string
+          school_code: string
+          school_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          office_code: string
+          office_name: string
+          school_code: string
+          school_name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          office_code?: string
+          office_name?: string
+          school_code?: string
+          school_name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       [_ in never]: never
