@@ -109,12 +109,16 @@ const Index = () => {
         return;
       }
 
-      // Check if breakfast exists
+      // Check if breakfast and lunch exist
       const breakfastExists = data.some(meal => meal.meal_name === '조식');
+      const lunchExists = data.some(meal => meal.meal_name === '중식');
       setHasBreakfast(breakfastExists);
       
-      if (!breakfastExists) {
+      // Only show breakfast adder if lunch exists but breakfast doesn't
+      if (!breakfastExists && lunchExists) {
         setShowBreakfastAdder(true);
+      } else {
+        setShowBreakfastAdder(false);
       }
 
       // Transform data to match NutritionData interface (filter out dinner/석식)
