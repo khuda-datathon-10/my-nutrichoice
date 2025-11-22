@@ -100,7 +100,7 @@ export function calculateRecommendedNutrients(profile: UserProfile): Recommended
 
   return {
     에너지: Math.round(tee),
-    탄수화물: Math.round(tee / 4), // TEE / 4 (g)
+    탄수화물: Math.round((tee * 0.6) / 4), // TEE * 0.6 / 4 (g) - 중간값 사용
     단백질: Math.round(profile.weight * 0.9), // 체중 * 0.9 (g)
     지방: Math.round((tee * 0.225) / 9), // TEE * 0.225 / 9 (g) - 중간값 사용
     비타민A: profile.gender === 'male' ? 1400 : 1200, // R.E
