@@ -22,25 +22,10 @@ const Index = () => {
   const [hasBreakfast, setHasBreakfast] = useState(false);
   const [showBreakfastAdder, setShowBreakfastAdder] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const mockRecommendations = [
-    {
-      nutrient: "단백질",
-      foods: ["닭가슴살", "두부", "계란", "연어", "그릭요거트"],
-      icon: "Beef"
-    },
-    {
-      nutrient: "비타민",
-      foods: ["당근", "시금치", "브로콜리", "파프리카", "토마토"],
-      icon: "Apple"
-    },
-    {
-      nutrient: "칼슘",
-      foods: ["우유", "치즈", "요거트", "뼈째먹는 생선", "아몬드"],
-      icon: "Milk"
-    }
-  ];
+  const ML_BACKEND_URL = "https://unsubordinative-martha-trigonometrically.ngrok-free.dev";
 
   const handleGetStarted = () => {
     setShowSearch(true);
@@ -153,6 +138,9 @@ const Index = () => {
       }, {});
 
       setNutrients(Object.values(aggregatedNutrients));
+      
+      // Get ML-based food recommendations
+      await getMLRecommendations(Object.values(aggregatedNutrients), recommendedNutrients);
 
       toast.success(`${transformedData.length}개의 급식 정보를 조회했습니다.`);
     } catch (error) {
@@ -163,7 +151,85 @@ const Index = () => {
     }
   };
 
-  const handleAddBreakfast = (foodItems: any[]) => {
+  const getMLRecommendations = async (currentNutrients: any[], recommended: any) => {
+    try {
+      // Calculate nutrient deficiencies (recommended - current, treat negatives as 0)
+      const deficiencies = {
+        carbohydrate: Math.max(0, (recommended.탄수화물 || 0) - (currentNutrients.find(n => n.name === '탄수화물')?.current || 0)),
+        protein: Math.max(0, (recommended.단백질 || 0) - (currentNutrients.find(n => n.name === '단백질')?.current || 0)),
+        fat: Math.max(0, (recommended.지방 || 0) - (currentNutrients.find(n => n.name === '지방')?.current || 0)),
+        vitamin_a: Math.max(0, (recommended.비타민A || 0) - (currentNutrients.find(n => n.name === '비타민A')?.current || 0)),
+        thiamine: Math.max(0, (recommended.티아민 || 0) - (currentNutrients.find(n => n.name === '티아민')?.current || 0)),
+        riboflavin: Math.max(0, (recommended.리보플라빈 || 0) - (currentNutrients.find(n => n.name === '리보플라빈')?.current || 0)),
+        vitamin_c: Math.max(0, (recommended.비타민C || 0) - (currentNutrients.find(n => n.name === '비타민C')?.current || 0)),
+        calcium: Math.max(0, (recommended.칼슘 || 0) - (currentNutrients.find(n => n.name === '칼슘')?.current || 0)),
+        iron: Math.max(0, (recommended.철분 || 0) - (currentNutrients.find(n => n.name === '철분')?.current || 0)),
+      };
+
+      const features = [
+        deficiencies.carbohydrate,
+        deficiencies.protein,
+        deficiencies.fat,
+        deficiencies.vitamin_a,
+        deficiencies.thiamine,
+        deficiencies.riboflavin,
+        deficiencies.vitamin_c,
+        deficiencies.calcium,
+        deficiencies.iron,
+      ];
+
+      console.log('Nutrient deficiencies:', deficiencies);
+      console.log('Feature vector:', features);
+
+      // Call ML backend
+      const response = await fetch(`${ML_BACKEND_URL}/predict-cluster`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ features }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`ML backend error: ${response.status}`);
+      }
+
+      const { cluster_id } = await response.json();
+      console.log('Predicted cluster:', cluster_id);
+
+      // Get 5 random foods from this cluster
+      const { data: foods, error } = await supabase
+        .from('food_items')
+        .select('*')
+        .eq('cluster_id', cluster_id)
+        .limit(100);
+
+      if (error) throw error;
+
+      if (foods && foods.length > 0) {
+        // Randomly select 5 foods
+        const shuffled = foods.sort(() => 0.5 - Math.random());
+        const selected = shuffled.slice(0, 5);
+
+        setRecommendations([{
+          nutrient: "저녁 식사 추천",
+          foods: selected.map(f => f.food_name),
+          icon: "Apple"
+        }]);
+
+        toast.success("ML 기반 음식 추천이 생성되었습니다");
+      } else {
+        setRecommendations([]);
+        toast.info("추천 가능한 음식이 없습니다");
+      }
+    } catch (error) {
+      console.error('ML recommendation error:', error);
+      toast.error("음식 추천 생성 중 오류가 발생했습니다");
+      setRecommendations([]);
+    }
+  };
+
+  const handleAddBreakfast = async (foodItems: any[]) => {
     if (!userProfile) {
       toast.error("먼저 급식 정보를 조회해주세요");
       return;
@@ -234,6 +300,9 @@ const Index = () => {
 
     setNutrients(updatedNutrients);
     setShowBreakfastAdder(false);
+    
+    // Get ML-based food recommendations with updated nutrients
+    await getMLRecommendations(updatedNutrients, recommendedNutrients);
   };
 
   return (
@@ -253,7 +322,7 @@ const Index = () => {
               <>
                 <NutritionDisplay data={mealData} />
                 <NutritionAnalysis nutrients={nutrients} />
-                <FoodRecommendations recommendations={mockRecommendations} />
+                <FoodRecommendations recommendations={recommendations} />
               </>
             )}
           </div>
