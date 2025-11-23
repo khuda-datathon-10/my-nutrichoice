@@ -19,7 +19,8 @@ const AdminFoodData = () => {
       if (error) throw error;
 
       if (data.success) {
-        toast.success(`✅ ${data.message}\n성공: ${data.successCount}개, 실패: ${data.errorCount}개`);
+        toast.success(`✅ ${data.message}`);
+        toast.info('백그라운드에서 처리가 진행됩니다. Edge Function 로그에서 진행 상황을 확인할 수 있습니다.');
       } else {
         toast.error('❌ Cluster 할당 실패');
       }
@@ -45,7 +46,7 @@ const AdminFoodData = () => {
           <h2 className="text-xl font-semibold mb-2">ML Cluster 자동 할당</h2>
           <p className="text-sm text-muted-foreground mb-4">
             음식 추천 기능을 위해 ML 모델을 사용하여 각 음식에 cluster_id를 자동으로 할당합니다.
-            최대 1,000개씩 처리됩니다.
+            백그라운드에서 처리되며, 완료까지 시간이 걸릴 수 있습니다.
           </p>
           <Button 
             onClick={handleAssignClusters} 
