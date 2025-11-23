@@ -153,6 +153,8 @@ const Index = () => {
 
   const getMLRecommendations = async (currentNutrients: any[], recommended: any) => {
     try {
+      toast.info('🤖 AI 음식 추천을 시작합니다...');
+      
       // Calculate nutrient deficiencies (recommended - current, treat negatives as 0)
       const deficiencies = {
         carbohydrate: Math.max(0, (recommended.탄수화물 || 0) - (currentNutrients.find(n => n.name === '탄수화물')?.current || 0)),
@@ -192,7 +194,7 @@ const Index = () => {
       console.log('   - 철분:', deficiencies.iron.toFixed(2), 'mg');
       console.log('2. Feature Vector (9개):', features.map(f => f.toFixed(2)));
       
-      toast.info('영양소 부족량 계산 완료, ML 모델 예측 중...');
+      toast.info('📊 영양소 부족량 분석 완료, ML 모델에 요청 중...');
 
       // Call ML backend
       const response = await fetch(`${ML_BACKEND_URL}/predict-cluster`, {
@@ -204,14 +206,25 @@ const Index = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`ML backend error: ${response.status}`);
+        const errorText = await response.text();
+        let errorDetail = '';
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorDetail = errorJson.detail || errorText;
+        } catch {
+          errorDetail = errorText;
+        }
+        console.error('ML backend error response:', errorDetail);
+        toast.error(`❌ ML 모델 예측 실패: ${errorDetail}`);
+        throw new Error(`ML backend error: ${response.status} - ${errorDetail}`);
       }
 
       const { cluster_id } = await response.json();
       console.log('3. 스케일링 완료');
       console.log('4. K-Means 클러스터 예측 결과:', cluster_id);
       
-      toast.info(`클러스터 ${cluster_id} 예측 완료, 음식 추천 중...`);
+      toast.success(`✅ 클러스터 ${cluster_id} 예측 완료!`);
+      toast.info('🍽️ 데이터베이스에서 추천 음식 검색 중...');
 
       // Get 5 random foods from this cluster
       const { data: foods, error } = await supabase
@@ -220,7 +233,11 @@ const Index = () => {
         .eq('cluster_id', cluster_id)
         .limit(100);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase query error:', error);
+        toast.error(`❌ 데이터베이스 조회 실패: ${error.message}`);
+        throw error;
+      }
 
       if (foods && foods.length > 0) {
         console.log('5. 클러스터', cluster_id, '에서', foods.length, '개 음식 조회됨');
@@ -238,14 +255,16 @@ const Index = () => {
           icon: "Apple"
         }]);
 
-        toast.success(`ML 기반 음식 추천 완료! (클러스터 ${cluster_id})`);
+        toast.success(`🎉 ML 기반 음식 추천 완료! ${selected.length}개의 음식을 추천합니다.`);
       } else {
+        console.log('5. 클러스터', cluster_id, '에 음식이 없음');
         setRecommendations([]);
-        toast.info("추천 가능한 음식이 없습니다");
+        toast.warning(`⚠️ 클러스터 ${cluster_id}에 추천 가능한 음식이 없습니다`);
       }
     } catch (error) {
       console.error('ML recommendation error:', error);
-      toast.error("음식 추천 생성 중 오류가 발생했습니다");
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      toast.error(`❌ 음식 추천 실패: ${errorMessage}`);
       setRecommendations([]);
     }
   };
