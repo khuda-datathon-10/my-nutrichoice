@@ -159,17 +159,21 @@ const Index = () => {
         protein: Math.max(0, (recommended.단백질 || 0) - (currentNutrients.find(n => n.name === '단백질')?.current || 0)),
         fat: Math.max(0, (recommended.지방 || 0) - (currentNutrients.find(n => n.name === '지방')?.current || 0)),
         vitamin_a: Math.max(0, (recommended.비타민A || 0) - (currentNutrients.find(n => n.name === '비타민A')?.current || 0)),
+        thiamine: Math.max(0, (recommended.티아민 || 0) - (currentNutrients.find(n => n.name === '티아민')?.current || 0)),
+        riboflavin: Math.max(0, (recommended.리보플라빈 || 0) - (currentNutrients.find(n => n.name === '리보플라빈')?.current || 0)),
         vitamin_c: Math.max(0, (recommended.비타민C || 0) - (currentNutrients.find(n => n.name === '비타민C')?.current || 0)),
         calcium: Math.max(0, (recommended.칼슘 || 0) - (currentNutrients.find(n => n.name === '칼슘')?.current || 0)),
         iron: Math.max(0, (recommended.철분 || 0) - (currentNutrients.find(n => n.name === '철분')?.current || 0)),
       };
 
-      // Use 7 features as expected by the model
+      // Use 9 features as expected by the scaler
       const features = [
         deficiencies.carbohydrate,
         deficiencies.protein,
         deficiencies.fat,
         deficiencies.vitamin_a,
+        deficiencies.thiamine,
+        deficiencies.riboflavin,
         deficiencies.vitamin_c,
         deficiencies.calcium,
         deficiencies.iron,
@@ -181,10 +185,12 @@ const Index = () => {
       console.log('   - 단백질:', deficiencies.protein.toFixed(2), 'g');
       console.log('   - 지방:', deficiencies.fat.toFixed(2), 'g');
       console.log('   - 비타민A:', deficiencies.vitamin_a.toFixed(2), 'R.E');
+      console.log('   - 티아민:', deficiencies.thiamine.toFixed(2), 'mg');
+      console.log('   - 리보플라빈:', deficiencies.riboflavin.toFixed(2), 'mg');
       console.log('   - 비타민C:', deficiencies.vitamin_c.toFixed(2), 'mg');
       console.log('   - 칼슘:', deficiencies.calcium.toFixed(2), 'mg');
       console.log('   - 철분:', deficiencies.iron.toFixed(2), 'mg');
-      console.log('2. Feature Vector (7개):', features.map(f => f.toFixed(2)));
+      console.log('2. Feature Vector (9개):', features.map(f => f.toFixed(2)));
       
       toast.info('영양소 부족량 계산 완료, ML 모델 예측 중...');
 
