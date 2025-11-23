@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+declare const EdgeRuntime: any;
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -8,50 +10,38 @@ const corsHeaders = {
 
 const ML_BACKEND_URL = "https://unsubordinative-martha-trigonometrically.ngrok-free.dev";
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    console.log('🚀 Starting cluster assignment process...');
-
-    // Get all foods without cluster_id
+async function assignClustersInBackground(supabaseUrl: string, supabaseKey: string) {
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  
+  console.log('🚀 Starting background cluster assignment...');
+  
+  let totalProcessed = 0;
+  let totalSuccess = 0;
+  let totalErrors = 0;
+  
+  while (true) {
+    // Get batch of foods without cluster_id
     const { data: foods, error: fetchError } = await supabase
       .from('food_items')
       .select('*')
       .is('cluster_id', null)
-      .limit(1000); // Process in batches
+      .limit(100); // Smaller batches
 
     if (fetchError) {
       console.error('❌ Error fetching foods:', fetchError);
-      throw fetchError;
+      break;
     }
 
     if (!foods || foods.length === 0) {
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: '모든 음식에 이미 cluster_id가 할당되어 있습니다.',
-          processed: 0
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.log('✅ All foods have been assigned cluster_id');
+      break;
     }
 
-    console.log(`📊 Processing ${foods.length} foods...`);
+    console.log(`📊 Processing batch of ${foods.length} foods...`);
 
-    let successCount = 0;
-    let errorCount = 0;
-
-    // Process each food
+    // Process each food in batch
     for (const food of foods) {
       try {
-        // Extract nutrient features (9 features)
         const features = [
           parseFloat(food.carbohydrate) || 0,
           parseFloat(food.protein) || 0,
@@ -64,7 +54,6 @@ serve(async (req) => {
           parseFloat(food.iron) || 0,
         ];
 
-        // Call ML backend to predict cluster
         const mlResponse = await fetch(`${ML_BACKEND_URL}/predict-cluster`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -72,45 +61,82 @@ serve(async (req) => {
         });
 
         if (!mlResponse.ok) {
-          console.error(`❌ ML prediction failed for ${food.food_name}:`, mlResponse.status);
-          errorCount++;
+          console.error(`❌ ML prediction failed for ${food.food_name}`);
+          totalErrors++;
           continue;
         }
 
         const { cluster_id } = await mlResponse.json();
 
-        // Update food with cluster_id
         const { error: updateError } = await supabase
           .from('food_items')
           .update({ cluster_id })
           .eq('id', food.id);
 
         if (updateError) {
-          console.error(`❌ Update failed for ${food.food_name}:`, updateError);
-          errorCount++;
+          console.error(`❌ Update failed for ${food.food_name}`);
+          totalErrors++;
           continue;
         }
 
-        successCount++;
-        
-        if (successCount % 100 === 0) {
-          console.log(`✅ Progress: ${successCount} foods assigned`);
-        }
+        totalSuccess++;
+        totalProcessed++;
       } catch (error) {
-        console.error(`❌ Error processing ${food.food_name}:`, error);
-        errorCount++;
+        console.error(`❌ Error processing food:`, error);
+        totalErrors++;
       }
     }
+    
+    console.log(`✅ Batch complete. Total: ${totalProcessed} (Success: ${totalSuccess}, Errors: ${totalErrors})`);
+  }
+  
+  console.log(`🎉 All batches complete! Total Success: ${totalSuccess}, Total Errors: ${totalErrors}`);
+}
 
-    console.log(`🎉 Cluster assignment complete! Success: ${successCount}, Errors: ${errorCount}`);
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
 
+  try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Check how many foods need cluster assignment
+    const { count, error: countError } = await supabase
+      .from('food_items')
+      .select('*', { count: 'exact', head: true })
+      .is('cluster_id', null);
+
+    if (countError) {
+      console.error('❌ Error counting foods:', countError);
+      throw countError;
+    }
+
+    if (count === 0) {
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: '모든 음식에 이미 cluster_id가 할당되어 있습니다.',
+          remaining: 0
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Start background task
+    EdgeRuntime.waitUntil(
+      assignClustersInBackground(supabaseUrl, supabaseKey)
+    );
+
+    // Return immediate response
     return new Response(
       JSON.stringify({
         success: true,
-        processed: foods.length,
-        successCount,
-        errorCount,
-        message: `${successCount}개 음식에 cluster_id 할당 완료`
+        message: `백그라운드에서 ${count}개 음식에 cluster_id 할당 시작`,
+        remaining: count,
+        status: 'processing'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
