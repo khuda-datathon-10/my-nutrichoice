@@ -1,0 +1,19 @@
+project_id = "vscdrnalvcvzaxrombgy"
+
+[functions.assign-clusters]
+verify_jwt = false
+
+[functions.import-food-data]
+verify_jwt = false
+
+[functions.import-meal-data]
+verify_jwt = false
+
+[functions.parse-and-import]
+verify_jwt = false
+
+[functions.search-foods]
+verify_jwt = false
+
+[functions.search-schools]
+verify_jwt = false

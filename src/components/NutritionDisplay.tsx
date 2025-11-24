@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Utensils, Flame, TrendingDown } from "lucide-react";
+import { Utensils, Flame } from "lucide-react";
 
 interface NutritionData {
   dishName: string;
@@ -31,37 +31,27 @@ const NutritionDisplay = ({ data }: NutritionDisplayProps) => {
             key={index} 
             className="rounded-lg border border-border bg-card p-4 shadow-soft transition-all hover:shadow-medium"
           >
-            <div className="mb-3 flex items-start justify-between">
-              <h3 className="text-lg font-semibold text-card-foreground">
-                {meal.dishName}
-              </h3>
+            <div className="mb-3 flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-card-foreground mb-2">
+                  {meal.dishName.split('<br/>')[0].replace(/\([^)]*\)/g, '').trim()}
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {meal.dishName
+                    .split('<br/>')
+                    .slice(1)
+                    .filter(item => item.trim())
+                    .map(item => item.replace(/\([^)]*\)/g, '').trim())
+                    .join(', ')}
+                </p>
+              </div>
               {meal.calories && (
-                <Badge variant="secondary" className="flex items-center gap-1">
+                <Badge variant="secondary" className="flex items-center gap-1 shrink-0">
                   <Flame className="h-3 w-3" />
                   {meal.calories}
                 </Badge>
               )}
             </div>
-            
-            {meal.nutrition && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                  <TrendingDown className="h-4 w-4" />
-                  영양 정보
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {meal.nutrition.split('|').map((nutrient, idx) => (
-                    <Badge 
-                      key={idx} 
-                      variant="outline"
-                      className="text-xs"
-                    >
-                      {nutrient.trim()}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         ))}
       </CardContent>
